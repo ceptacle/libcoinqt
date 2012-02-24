@@ -1,17 +1,16 @@
 #include "optionsmodel.h"
 #include "bitcoinunits.h"
 
-#include "headers.h"
-#include "init.h"
+#include <coinWallet/WalletDB.h>
 
-OptionsModel::OptionsModel(CWallet *wallet, QObject *parent) :
+OptionsModel::OptionsModel(Wallet *wallet, QObject *parent) :
     QAbstractListModel(parent),
     wallet(wallet),
     nDisplayUnit(BitcoinUnits::BTC),
     bDisplayAddresses(false)
 {
     // Read our specific settings from the wallet db
-    CWalletDB walletdb(wallet->strWalletFile);
+    CWalletDB walletdb(wallet->getDateDir(), wallet->strWalletFile);
     walletdb.ReadSetting("nDisplayUnit", nDisplayUnit);
     walletdb.ReadSetting("bDisplayAddresses", bDisplayAddresses);
 }
@@ -20,6 +19,13 @@ int OptionsModel::rowCount(const QModelIndex & parent) const
 {
     return OptionIDRowCount;
 }
+bool GetStartOnSystemStartup() { return false; }
+bool fMinimizeToTray = true;
+bool fUseUPnP = false;
+bool fMinimizeOnClose = true;
+bool fUseProxy = false;
+int64 nTransactionFee = 0;
+Endpoint addrProxy;
 
 QVariant OptionsModel::data(const QModelIndex & index, int role) const
 {
@@ -38,9 +44,9 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
         case ConnectSOCKS4:
             return QVariant(fUseProxy);
         case ProxyIP:
-            return QVariant(QString::fromStdString(addrProxy.ToStringIP()));
+            return QVariant(QString::fromStdString(""/*addrProxy.ToStringIP()*/));
         case ProxyPort:
-            return QVariant(addrProxy.GetPort());
+            return QVariant(0 /*addrProxy.GetPort()*/);
         case Fee:
             return QVariant(nTransactionFee);
         case DisplayUnit:
@@ -54,12 +60,13 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
     return QVariant();
 }
 
+bool SetStartOnSystemStartup(bool val) { return false; }
 bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, int role)
 {
     bool successful = true; /* set to false on parse error */
     if(role == Qt::EditRole)
     {
-        CWalletDB walletdb(wallet->strWalletFile);
+        CWalletDB walletdb(wallet->getDateDir(), wallet->strWalletFile);
         switch(index.row())
         {
         case StartAtStartup:
@@ -87,10 +94,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         case ProxyIP:
             {
                 // Use CAddress to parse and check IP
-                CNetAddr addr(value.toString().toStdString());
-                if (addr.IsValid())
+                Endpoint addr(value.toString().toStdString());
+                if (addr.isValid())
                 {
-                    addrProxy.SetIP(addr);
+                    addrProxy.setIP(addr.getIP());
                     walletdb.WriteSetting("addrProxy", addrProxy);
                 }
                 else
@@ -104,7 +111,7 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
                 int nPort = atoi(value.toString().toAscii().data());
                 if (nPort > 0 && nPort < std::numeric_limits<unsigned short>::max())
                 {
-                    addrProxy.SetPort(nPort);
+                    addrProxy.setPort(nPort);
                     walletdb.WriteSetting("addrProxy", addrProxy);
                 }
                 else

@@ -8,7 +8,7 @@
 #include "addresstablemodel.h"
 #include "bitcoinunits.h"
 
-#include "headers.h"
+#include <coinWallet/Wallet.h>
 
 #include <QLocale>
 #include <QList>
@@ -47,16 +47,16 @@ struct TxLessThan
 // Private implementation
 struct TransactionTablePriv
 {
-    TransactionTablePriv(CWallet *wallet, TransactionTableModel *parent):
+    TransactionTablePriv(Wallet *wallet, TransactionTableModel *parent):
             wallet(wallet),
             parent(parent)
     {
     }
-    CWallet *wallet;
+    Wallet *wallet;
     TransactionTableModel *parent;
 
     /* Local cache of wallet.
-     * As it is in the same order as the CWallet, by definition
+     * As it is in the same order as the Wallet, by definition
      * this is sorted by sha256.
      */
     QList<TransactionRecord> cachedWallet;
@@ -169,7 +169,7 @@ struct TransactionTablePriv
             // If a status update is needed (blocks came in since last check),
             //  update the status of this transaction from the wallet. Otherwise,
             // simply re-use the cached status.
-            if(rec->statusUpdateNeeded())
+            if(rec->statusUpdateNeeded(wallet->getBestHeight()))
             {
                 CRITICAL_BLOCK(wallet->cs_wallet)
                 {
@@ -204,7 +204,7 @@ struct TransactionTablePriv
 
 };
 
-TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *parent):
+TransactionTableModel::TransactionTableModel(Wallet* wallet, WalletModel *parent):
         QAbstractTableModel(parent),
         wallet(wallet),
         walletModel(parent),

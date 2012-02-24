@@ -3,12 +3,12 @@
 
 #include <QObject>
 
-#include "util.h"
+#include <coin/util.h>
 
 class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
-class CWallet;
+class Wallet;
 
 struct SendCoinsRecipient
 {
@@ -22,7 +22,7 @@ class WalletModel : public QObject
 {
     Q_OBJECT
 public:
-    explicit WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent = 0);
+    explicit WalletModel(Wallet *wallet, OptionsModel *optionsModel, QObject *parent = 0);
 
     enum StatusCode // Returned by sendCoins
     {
@@ -80,6 +80,10 @@ public:
     // Wallet backup
     bool backupWallet(const QString &filename);
 
+    // get a const handle to the wallet (not the optimal way to do this...)
+    Wallet* getWallet() const { return wallet; }
+
+
     // RAI object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
     {
@@ -103,7 +107,7 @@ public:
     UnlockContext requestUnlock();
 
 private:
-    CWallet *wallet;
+    Wallet *wallet;
 
     // Wallet has an options model for wallet-specific options
     // (transaction fee, for example)

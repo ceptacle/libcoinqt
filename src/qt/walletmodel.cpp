@@ -4,13 +4,13 @@
 #include "addresstablemodel.h"
 #include "transactiontablemodel.h"
 
-#include "headers.h"
-#include "db.h" // for BackupWallet
-
 #include <QTimer>
 #include <QSet>
 
-WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
+#include <coinWallet/Wallet.h>
+#include <coinWallet/WalletDB.h>
+
+WalletModel::WalletModel(Wallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
     transactionTableModel(0),
     cachedBalance(0), cachedUnconfirmedBalance(0), cachedNumTransactions(0),
@@ -33,7 +33,7 @@ qint64 WalletModel::getBalance() const
 
 qint64 WalletModel::getUnconfirmedBalance() const
 {
-    return wallet->GetUnconfirmedBalance();
+    return wallet->GetBalance(false);
 }
 
 int WalletModel::getNumTransactions() const
@@ -71,8 +71,8 @@ void WalletModel::update()
 
 bool WalletModel::validateAddress(const QString &address)
 {
-    CBitcoinAddress addressParsed(address.toStdString());
-    return addressParsed.IsValid();
+    ChainAddress addressParsed = wallet->chain().getAddress(address.toStdString());
+    return addressParsed.isValid();
 }
 
 WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients)
@@ -112,20 +112,20 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return AmountExceedsBalance;
     }
 
-    if((total + nTransactionFee) > getBalance())
+    if((total + wallet->nTransactionFee) > getBalance())
     {
-        return SendCoinsReturn(AmountWithFeeExceedsBalance, nTransactionFee);
+        return SendCoinsReturn(AmountWithFeeExceedsBalance, wallet->nTransactionFee);
     }
 
-    CRITICAL_BLOCK(cs_main)
     CRITICAL_BLOCK(wallet->cs_wallet)
     {
         // Sendmany
-        std::vector<std::pair<CScript, int64> > vecSend;
+        std::vector<std::pair<Script, int64> > vecSend;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
-            CScript scriptPubKey;
-            scriptPubKey.SetBitcoinAddress(rcp.address.toStdString());
+            Script scriptPubKey;
+            ChainAddress address = wallet->chain().getAddress(rcp.address.toStdString());
+            scriptPubKey.setAddress(address.getPubKeyHash());
             vecSend.push_back(make_pair(scriptPubKey, rcp.amount));
         }
 
@@ -142,15 +142,15 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
             }
             return TransactionCreationFailed;
         }
-        if(!ThreadSafeAskFee(nFeeRequired, tr("Sending...").toStdString(), NULL))
-        {
-            return Aborted;
-        }
+//        if(!ThreadSafeAskFee(nFeeRequired, tr("Sending...").toStdString(), NULL))
+//        {
+//            return Aborted;
+//        }
         if(!wallet->CommitTransaction(wtx, keyChange))
         {
             return TransactionCommitFailed;
         }
-        hex = QString::fromStdString(wtx.GetHash().GetHex());
+        hex = QString::fromStdString(wtx.getHash().GetHex());
     }
 
     // Add addresses that we've sent to to the address book

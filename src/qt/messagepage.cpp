@@ -7,10 +7,8 @@
 #include <QListWidgetItem>
 #include <QMessageBox>
 
-#include "main.h"
-#include "wallet.h"
-#include "init.h"
-#include "util.h"
+#include <coinWallet/Wallet.h>
+#include <coinHTTP/RequestHandler.h>
 
 #include "messagepage.h"
 #include "ui_messagepage.h"
@@ -68,8 +66,8 @@ void MessagePage::on_signMessage_clicked()
 {
     QString address = ui->signFrom->text();
 
-    CBitcoinAddress addr(address.toStdString());
-    if (!addr.IsValid())
+    ChainAddress addr = model->getWallet()->chain().getAddress(address.toStdString());
+    if (!addr.isValid())
     {
         QMessageBox::critical(this, tr("Error signing"), tr("%1 is not a valid address.").arg(address),
                               QMessageBox::Abort, QMessageBox::Abort);
@@ -84,7 +82,7 @@ void MessagePage::on_signMessage_clicked()
     }
 
     CKey key;
-    if (!pwalletMain->GetKey(addr, key))
+    if (!model->getWallet()->getKey(addr.getPubKeyHash(), key))
     {
         QMessageBox::critical(this, tr("Error signing"), tr("Private key for %1 is not available.").arg(address),
                               QMessageBox::Abort, QMessageBox::Abort);
@@ -92,7 +90,7 @@ void MessagePage::on_signMessage_clicked()
     }
 
     CDataStream ss(SER_GETHASH);
-    ss << strMessageMagic;
+    ss << model->getWallet()->chain().signedMessageMagic();
     ss << ui->message->document()->toPlainText().toStdString();
 
     std::vector<unsigned char> vchSig;
@@ -102,6 +100,6 @@ void MessagePage::on_signMessage_clicked()
                               QMessageBox::Abort, QMessageBox::Abort);
     }
 
-    ui->signature->setText(QString::fromStdString(EncodeBase64(&vchSig[0], vchSig.size())));
+    ui->signature->setText(QString::fromStdString(Auth::encode64(std::string((char*)&vchSig[0], vchSig.size()))));
     ui->signature->setFont(GUIUtil::bitcoinAddressFont());
 }

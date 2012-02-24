@@ -2,7 +2,10 @@
 #include "guiutil.h"
 #include "walletmodel.h"
 
-#include "headers.h"
+#include <coin/Address.h>
+#include <coinWallet/Wallet.h>
+
+#include <boost/foreach.hpp>
 
 #include <QFont>
 #include <QColor>
@@ -29,10 +32,10 @@ struct AddressTableEntry
 // Private implementation
 struct AddressTablePriv
 {
-    CWallet *wallet;
+    Wallet *wallet;
     QList<AddressTableEntry> cachedAddressTable;
 
-    AddressTablePriv(CWallet *wallet):
+    AddressTablePriv(Wallet *wallet):
             wallet(wallet) {}
 
     void refreshAddressTable()
@@ -41,14 +44,15 @@ struct AddressTablePriv
 
         CRITICAL_BLOCK(wallet->cs_wallet)
         {
-            BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, std::string)& item, wallet->mapAddressBook)
+            for(std::map<ChainAddress, std::string>::const_iterator item = wallet->mapAddressBook.begin(); item !=  wallet->mapAddressBook.end(); ++item)
             {
-                const CBitcoinAddress& address = item.first;
-                const std::string& strName = item.second;
-                bool fMine = wallet->HaveKey(address);
+                const ChainAddress& address = item->first;
+                PubKeyHash pubKeyHash = address.getPubKeyHash();
+                const std::string& strName = item->second;
+                bool fMine = wallet->haveKey(pubKeyHash);
                 cachedAddressTable.append(AddressTableEntry(fMine ? AddressTableEntry::Receiving : AddressTableEntry::Sending,
                                   QString::fromStdString(strName),
-                                  QString::fromStdString(address.ToString())));
+                                  QString::fromStdString(address.toString())));
             }
         }
     }
@@ -71,7 +75,7 @@ struct AddressTablePriv
     }
 };
 
-AddressTableModel::AddressTableModel(CWallet *wallet, WalletModel *parent) :
+AddressTableModel::AddressTableModel(Wallet *wallet, WalletModel *parent) :
     QAbstractTableModel(parent),walletModel(parent),wallet(wallet),priv(0)
 {
     columns << tr("Label") << tr("Address");
@@ -279,7 +283,7 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
             editStatus = KEY_GENERATION_FAILURE;
             return QString();
         }
-        strAddress = CBitcoinAddress(newKey).ToString();
+        strAddress = wallet->chain().getAddress(toPubKeyHash(newKey)).toString();
     }
     else
     {
@@ -321,8 +325,8 @@ QString AddressTableModel::labelForAddress(const QString &address) const
 {
     CRITICAL_BLOCK(wallet->cs_wallet)
     {
-        CBitcoinAddress address_parsed(address.toStdString());
-        std::map<CBitcoinAddress, std::string>::iterator mi = wallet->mapAddressBook.find(address_parsed);
+        ChainAddress address_parsed(address.toStdString());
+        std::map<ChainAddress, std::string>::iterator mi = wallet->mapAddressBook.find(address_parsed);
         if (mi != wallet->mapAddressBook.end())
         {
             return QString::fromStdString(mi->second);

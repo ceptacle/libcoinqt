@@ -1,11 +1,11 @@
 #ifndef TRANSACTIONRECORD_H
 #define TRANSACTIONRECORD_H
 
-#include "uint256.h"
+#include <coin/uint256.h>
 
 #include <QList>
 
-class CWallet;
+class Wallet;
 class CWalletTx;
 
 /** UI model for transaction status. The transaction status is the part of a transaction that will change over time.
@@ -93,10 +93,10 @@ public:
     {
     }
 
-    /** Decompose CWallet transaction to model transaction records.
+    /** Decompose Wallet transaction to model transaction records.
      */
     static bool showTransaction(const CWalletTx &wtx);
-    static QList<TransactionRecord> decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx);
+    static QList<TransactionRecord> decomposeTransaction(const Wallet *wallet, const CWalletTx &wtx);
 
     /** @name Immutable transaction attributes
       @{*/
@@ -123,7 +123,7 @@ public:
 
     /** Return whether a status update is needed.
      */
-    bool statusUpdateNeeded();
+    bool statusUpdateNeeded(int height);
 };
 
 #endif // TRANSACTIONRECORD_H

@@ -6,7 +6,8 @@
 class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
-class CWallet;
+class Node;
+class Wallet;
 
 QT_BEGIN_NAMESPACE
 class QDateTime;
@@ -17,7 +18,7 @@ class ClientModel : public QObject
 {
     Q_OBJECT
 public:
-    explicit ClientModel(OptionsModel *optionsModel, QObject *parent = 0);
+    explicit ClientModel(const Node& node, OptionsModel *optionsModel, QObject *parent = 0);
 
     OptionsModel *getOptionsModel();
 
@@ -39,6 +40,7 @@ public:
     QString formatFullVersion() const;
 
 private:
+    const Node& node;
     OptionsModel *optionsModel;
 
     int cachedNumConnections;

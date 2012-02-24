@@ -7,20 +7,20 @@
 #include <boost/tokenizer.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "headers.h"
-
 using namespace boost::interprocess;
 using namespace boost::posix_time;
 using namespace boost;
 using namespace std;
 
+#include <coin/util.h>
+
 void ipcShutdown()
 {
-    message_queue::remove("BitcoinURL");
+//    message_queue::remove("BitcoinURL");
 }
 
 void ipcThread(void* parg)
-{
+{/*
     message_queue* mq = (message_queue*)parg;
     char strBuf[257];
     size_t nSize;
@@ -40,10 +40,10 @@ void ipcThread(void* parg)
         }
     }
     ipcShutdown();
-}
+*/}
 
 void ipcInit()
-{
+{/*
     message_queue* mq;
     char strBuf[257];
     size_t nSize;
@@ -74,4 +74,4 @@ void ipcInit()
     {
         delete mq;
     }
-}
+*/}
